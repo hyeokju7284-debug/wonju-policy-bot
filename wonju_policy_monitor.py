@@ -9,7 +9,7 @@
 - 전공 및 분야: 화훼조형, 원예, 전시 디스플레이, 문화예술 기획, 청년 창업, 구직·취업 지원
 - 상태: 대학 졸업예정 / 청년 미취업자 (인천 현장실무 및 학업 병행 중)
 [알림 채널]
-- Gmail 이메일 (구글 앱 비밀번호 연동, 맥북 특수문자 자동 정규화 및 UTF-8 완벽 지원) 및 텔레그램 푸시 지원
+- Gmail 이메일 (Port 465 SSL / 587 듀얼 포트 지원, 일일 브리핑 단일 통합 발송) 및 텔레그램 푸시 지원
 """
 
 import os
@@ -36,14 +36,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("PolicyMonitor")
 
-# 환경변수 로드 및 맥북 특수문자(ą 등) 자동 정규화
+# 환경변수 로드 및 특수문자/공백 정규화
 def clean_ascii_secret(val):
     if not val:
         return ""
-    # 유니코드 분해 정규화(NFKD)를 통해 ą -> a 등으로 자동 복원 후 순수 ASCII 추출
     normalized = unicodedata.normalize("NFKD", val)
     cleaned = normalized.encode("ascii", "ignore").decode("ascii")
-    # 공백 및 줄바꿈 제거
     return re.sub(r"\s+", "", cleaned)
 
 NOTIFICATION_CHANNEL = os.getenv("NOTIFICATION_CHANNEL", "email").lower()
@@ -139,138 +137,141 @@ def save_history(history):
         logger.error(f"히스토리 파일 저장 실패: {e}")
 
 
-def send_gmail_notification(title, source, match_reason, summary_3lines, url):
-    """Gmail SMTP를 통한 고품질 카드형 이메일 발송"""
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        logger.warning("GMAIL_USER 또는 GMAIL_APP_PASSWORD가 비어 있어 메일 전송을 건너뜁니다.")
-        return False
+def build_digest_html(matched_items):
+    """여러 건의 정책을 깔끔한 모바일 반응형 카드 형태로 하나로 묶는 템플릿"""
+    cards_html = ""
+    for idx, item in enumerate(matched_items, 1):
+        summary = item.get("summary_3lines", {})
+        clean_title = re.sub(r"[\r\n\t]+", " ", item["title"]).strip()
+        cards_html += f"""
+        <div style="background: #ffffff; border: 1px solid #e1e4e8; border-radius: 10px; margin-bottom: 20px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+          <div style="margin-bottom: 10px;">
+            <span style="background: #e8f0fe; color: #1a73e8; font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 12px;">#{idx} 🏛 {item['source']}</span>
+            <h3 style="font-size: 16px; margin: 8px 0; color: #202124; line-height: 1.4;">{clean_title}</h3>
+          </div>
+          <div style="background: #f8f9fa; border-left: 3px solid #1a73e8; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #3c4043; line-height: 1.5;">
+            <strong>🎯 맞춤 선정 사유:</strong> {item['match_reason']}
+          </div>
+          <div style="font-size: 13px; line-height: 1.6; color: #3c4043;">
+            <p style="margin: 4px 0;"><b>• 지원 내용:</b> {summary.get('line1_support', '-')}</p>
+            <p style="margin: 4px 0;"><b>• 신청 자격:</b> {summary.get('line2_qualification', '-')}</p>
+            <p style="margin: 4px 0;"><b>• 접수 마감:</b> {summary.get('line3_deadline', '-')}</p>
+          </div>
+          <div style="margin-top: 14px;">
+            <a href="{item['url']}" target="_blank" style="display: inline-block; background: #1a73e8; color: #ffffff !important; text-decoration: none; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: bold;">공고문 원문 및 신청 바로가기 →</a>
+          </div>
+        </div>
+        """
 
-    msg = MIMEMultipart("alternative")
-    clean_title = re.sub(r"[\r\n\t]+", " ", title).strip()
-    msg["Subject"] = Header(f"[원주·강원 청년정책 알림] {clean_title}", "utf-8")
-    msg["From"] = formataddr((str(Header("청년정책 비서", "utf-8")), GMAIL_USER))
-    msg["To"] = RECEIVER_EMAIL
-
-    html_content = f"""
+    full_html = f"""
     <!DOCTYPE html>
     <html lang="ko">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif; background-color: #f6f8fa; margin: 0; padding: 20px; }}
-        .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e1e4e8; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
-        .header {{ background: #1a73e8; color: #ffffff; padding: 24px; text-align: left; }}
-        .badge {{ display: inline-block; background: rgba(255,255,255,0.25); color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }}
-        .title {{ font-size: 18px; font-weight: 700; margin: 0; line-height: 1.4; }}
-        .body {{ padding: 24px; color: #24292e; }}
-        .reason-box {{ background-color: #e8f0fe; border-left: 4px solid #1a73e8; padding: 14px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; line-height: 1.5; color: #174ea6; }}
-        .summary-list {{ list-style: none; padding: 0; margin: 0 0 24px 0; }}
-        .summary-item {{ margin-bottom: 14px; font-size: 14px; line-height: 1.6; }}
-        .label {{ font-weight: 700; color: #1a73e8; display: block; margin-bottom: 2px; }}
-        .btn {{ display: inline-block; background: #1a73e8; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; }}
-        .footer {{ background: #fafbfc; padding: 16px 24px; font-size: 12px; color: #586069; border-top: 1px solid #e1e4e8; }}
-      </style>
     </head>
-    <body>
-      <div class="card">
-        <div class="header">
-          <span class="badge">🏛 {source}</span>
-          <h2 class="title">{clean_title}</h2>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif; background-color: #f6f8fa; margin: 0; padding: 20px;">
+      <div style="max-width: 640px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #1a73e8, #174ea6); color: #ffffff; padding: 24px; border-radius: 12px 12px 0 0; text-align: left;">
+          <h2 style="margin: 0 0 6px 0; font-size: 20px;">🌿 원주·강원 청년정책 맞춤 알림</h2>
+          <p style="margin: 0; font-size: 13px; opacity: 0.95;">조건에 부합하는 신규 지원사업 <b>{len(matched_items)}건</b>이 발굴되었습니다.</p>
         </div>
-        <div class="body">
-          <div class="reason-box">
-            <strong>🎯 맞춤 선정 사유:</strong><br>
-            {match_reason}
+        <div style="background: #ffffff; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid #e1e4e8; border-top: none;">
+          {cards_html}
+          <div style="text-align: center; padding-top: 14px; font-size: 12px; color: #5f6368; border-top: 1px solid #f1f3f4;">
+            본 메일은 2003년생 원주시 주민등록 청년(화훼·원예·전시·창업·구직 지원) 맞춤 자동화 봇에 의해 발송되었습니다.
           </div>
-          <h3 style="font-size: 15px; margin-top: 0; margin-bottom: 12px; border-bottom: 2px solid #f1f3f4; padding-bottom: 8px;">📋 핵심 3줄 실행 요약</h3>
-          <ul class="summary-list">
-            <li class="summary-item">
-              <span class="label">1. 지원 내용 및 혜택</span>
-              {summary_3lines.get('line1_support', '-')}
-            </li>
-            <li class="summary-item">
-              <span class="label">2. 신청 자격 요건</span>
-              {summary_3lines.get('line2_qualification', '-')}
-            </li>
-            <li class="summary-item">
-              <span class="label">3. 접수 마감일 및 방법</span>
-              {summary_3lines.get('line3_deadline', '-')}
-            </li>
-          </ul>
-          <div style="text-align: center; margin-top: 24px;">
-            <a href="{url}" class="btn" target="_blank">공고문 원문 및 신청 바로가기 →</a>
-          </div>
-        </div>
-        <div class="footer">
-          본 메일은 2003년생 원주시 주민등록 청년 맞춤 자동화 봇에 의해 발송되었습니다.
         </div>
       </div>
     </body>
     </html>
     """
+    return full_html
 
+
+def send_gmail_digest(matched_items):
+    """Gmail SMTP를 통한 브리핑 이메일 전송 (Port 465 SSL 우선 접속으로 연결 끊김 원천 차단)"""
+    if not matched_items:
+        return True
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        logger.warning("GMAIL_USER 또는 GMAIL_APP_PASSWORD가 비어 있어 메일 전송을 건너뜁니다.")
+        return False
+
+    count = len(matched_items)
+    if count == 1:
+        clean_title = re.sub(r"[\r\n\t]+", " ", matched_items[0]["title"]).strip()
+        subject_str = f"[원주·강원 청년정책 알림] {clean_title}"
+    else:
+        first_title = re.sub(r"[\r\n\t]+", " ", matched_items[0]["title"]).strip()
+        subject_str = f"[원주·강원 청년정책 알림] {first_title} 외 {count-1}건"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = Header(subject_str, "utf-8")
+    msg["From"] = formataddr((str(Header("청년정책 비서", "utf-8")), GMAIL_USER))
+    msg["To"] = RECEIVER_EMAIL
+
+    html_content = build_digest_html(matched_items)
     msg.attach(MIMEText(html_content, "html", "utf-8"))
 
+    # 1차 시도: Port 465 SSL (GitHub Actions / 클라우드 환경에서 가장 안정적이며 차단 없음)
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=25) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.send_message(msg)
+        logger.info(f"📧 Gmail 발송 성공 (Port 465 SSL) -> {RECEIVER_EMAIL} ({count}건 수록)")
+        return True
+    except Exception as e1:
+        logger.warning(f"Port 465 SSL 접속 실패 ({e1}), Port 587로 재시도합니다.")
+
+    # 2차 시도: Port 587 STARTTLS (폴백)
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=25) as server:
             server.ehlo()
             server.starttls()
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.send_message(msg)
-        logger.info(f"📧 Gmail 발송 성공 -> {RECEIVER_EMAIL}: {clean_title}")
+        logger.info(f"📧 Gmail 발송 성공 (Port 587 TLS) -> {RECEIVER_EMAIL} ({count}건 수록)")
         return True
-    except Exception as e:
-        logger.error(f"Gmail 발송 실패: {e}")
+    except Exception as e2:
+        logger.error(f"Gmail 발송 최종 실패: {e2}")
         return False
 
 
-def send_telegram_message(title, source, match_reason, summary_3lines, url):
-    """텔레그램 푸시 알림 발송 (선택 채널)"""
+def send_telegram_digest(matched_items):
+    """텔레그램 푸시 알림 발송"""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return False
 
-    message_text = (
-        f"🌿 <b>[원주/강원 맞춤 청년정책 알림]</b>\n\n"
-        f"📌 <b>{title}</b>\n"
-        f"🏛 <b>출처:</b> {source}\n\n"
-        f"💡 <b>맞춤 선정 사유:</b>\n"
-        f"{match_reason}\n\n"
-        f"📋 <b>핵심 3줄 실행 요약:</b>\n"
-        f"• <b>지원 내용:</b> {summary_3lines.get('line1_support', '-')}\n"
-        f"• <b>신청 자격:</b> {summary_3lines.get('line2_qualification', '-')}\n"
-        f"• <b>접수 마감:</b> {summary_3lines.get('line3_deadline', '-')}\n\n"
-        f"🔗 <a href='{url}'>공고문 바로가기 (원문 링크)</a>"
-    )
-
-    api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message_text,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": False
-    }
-
-    try:
-        res = requests.post(api_url, json=payload, timeout=10)
-        return res.status_code == 200
-    except Exception as e:
-        logger.error(f"텔레그램 요청 중 예외 발생: {e}")
-    return False
-
-
-def dispatch_notification(title, source, match_reason, summary_3lines, url):
-    """설정된 채널에 따라 알림 발송"""
-    sent = False
-    if NOTIFICATION_CHANNEL in ["email", "all"]:
-        if send_gmail_notification(title, source, match_reason, summary_3lines, url):
-            sent = True
-
-    if NOTIFICATION_CHANNEL in ["telegram", "all"]:
-        if send_telegram_message(title, source, match_reason, summary_3lines, url):
-            sent = True
-
-    return sent
+    success_all = True
+    for item in matched_items:
+        summary = item.get("summary_3lines", {})
+        clean_title = re.sub(r"[\r\n\t]+", " ", item["title"]).strip()
+        message_text = (
+            f"🌿 <b>[원주/강원 맞춤 청년정책 알림]</b>\n\n"
+            f"📌 <b>{clean_title}</b>\n"
+            f"🏛 <b>출처:</b> {item['source']}\n\n"
+            f"💡 <b>맞춤 선정 사유:</b>\n"
+            f"{item['match_reason']}\n\n"
+            f"📋 <b>핵심 3줄 실행 요약:</b>\n"
+            f"• <b>지원 내용:</b> {summary.get('line1_support', '-')}\n"
+            f"• <b>신청 자격:</b> {summary.get('line2_qualification', '-')}\n"
+            f"• <b>접수 마감:</b> {summary.get('line3_deadline', '-')}\n\n"
+            f"🔗 <a href='{item['url']}'>공고문 바로가기 (원문 링크)</a>"
+        )
+        api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message_text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": False
+        }
+        try:
+            res = requests.post(api_url, json=payload, timeout=10)
+            if res.status_code != 200:
+                success_all = False
+        except Exception:
+            success_all = False
+    return success_all
 
 
 def call_llm_filter(title, source, content, url):
@@ -423,9 +424,9 @@ def fetch_gangwon_youth_portal():
 
 
 def fetch_detail_content(url):
-    """공고 상세 본문 텍스트 추출"""
+    """공고 상세 본문 텍스트 추출 (타임아웃 10초 설정)"""
     try:
-        res = requests.get(url, headers=DEFAULT_HEADERS, timeout=15)
+        res = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
         if res.status_code == 200:
             soup = BeautifulSoup(res.text, "html.parser")
             content_div = (
@@ -440,7 +441,7 @@ def fetch_detail_content(url):
                 return content_div.get_text(separator="\n", strip=True)
             return soup.get_text(separator="\n", strip=True)[:3000]
     except Exception as e:
-        logger.warning(f"상세 본문 추출 실패 ({url}): {e}")
+        logger.warning(f"상세 본문 추출 생략 ({url}): {e}")
     return ""
 
 
@@ -460,7 +461,7 @@ def main():
 
     logger.info(f"총 {len(all_scraped)}건의 최신 공고를 수집했습니다.")
 
-    matched_count = 0
+    matched_items = []
     for notice in all_scraped:
         n_id = notice["id"]
         title = notice["title"]
@@ -482,31 +483,38 @@ def main():
             summary = analysis.get("summary_3lines", {})
             logger.info(f"🎯 적합 정책 발굴! -> {title}")
 
-            # 알림 발송
-            delivered = dispatch_notification(
-                title=title,
-                source=notice["source"],
-                match_reason=reason,
-                summary_3lines=summary,
-                url=notice["url"]
-            )
-            
-            if delivered:
-                matched_count += 1
-                history[n_id] = {
-                    "status": "matched_and_notified",
-                    "mail_delivered": True,
-                    "title": title,
-                    "notified_at": datetime.now().isoformat(),
-                    "summary": summary
-                }
-            else:
-                logger.warning(f"알림 발송 미완료로 재시도를 위해 이력에 저장하지 않습니다: {title}")
+            notice["match_reason"] = reason
+            notice["summary_3lines"] = summary
+            matched_items.append(notice)
         else:
             history[n_id] = {"status": "unmatched", "title": title}
 
+    # 적합 정책이 발굴된 경우 통합 브리핑 발송
+    if matched_items:
+        logger.info(f"총 {len(matched_items)}건의 적합 정책을 통합 브리핑으로 발송합니다.")
+        email_sent = True
+        if NOTIFICATION_CHANNEL in ["email", "all"]:
+            email_sent = send_gmail_digest(matched_items)
+
+        if NOTIFICATION_CHANNEL in ["telegram", "all"]:
+            send_telegram_digest(matched_items)
+
+        if email_sent:
+            for item in matched_items:
+                history[item["id"]] = {
+                    "status": "matched_and_notified",
+                    "mail_delivered": True,
+                    "title": item["title"],
+                    "notified_at": datetime.now().isoformat(),
+                    "summary": item.get("summary_3lines", {})
+                }
+            logger.info(f"=== 모니터링 완료: {len(matched_items)}건 발송 성공 및 이력 기록 완료 ===")
+        else:
+            logger.warning("발송 실패로 인해 재시도를 위해 이력에 저장하지 않았습니다.")
+    else:
+        logger.info("=== 모니터링 완료: 오늘 새로 발굴된 신규 적합 정책이 없습니다. ===")
+
     save_history(history)
-    logger.info(f"=== 모니터링 완료: 신규 적합 정책 {matched_count}건 발송 완료 ===")
 
 
 if __name__ == "__main__":
