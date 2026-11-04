@@ -9,7 +9,7 @@
 - 전공 및 분야: 화훼조형, 원예, 전시 디스플레이, 문화예술 기획, 청년 창업, 구직·취업 지원
 - 상태: 대학 졸업예정 / 청년 미취업자 (인천 현장실무 및 학업 병행 중)
 [알림 채널]
-- Gmail 이메일 (구글 앱 비밀번호 연동) 및 텔레그램 푸시 지원
+- Gmail 이메일 (구글 앱 비밀번호 연동, UTF-8 완벽 지원) 및 텔레그램 푸시 지원
 """
 
 import os
@@ -20,6 +20,8 @@ import re
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.header import Header
+from email.utils import formataddr
 from datetime import datetime
 from urllib.parse import urljoin
 import requests
@@ -34,24 +36,18 @@ logging.basicConfig(
 logger = logging.getLogger("PolicyMonitor")
 
 # 환경변수 로드
-# 1. 알림 채널 설정 (email, telegram, all)
 NOTIFICATION_CHANNEL = os.getenv("NOTIFICATION_CHANNEL", "email").lower()
+GMAIL_USER = os.getenv("GMAIL_USER", "").strip()
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+RECEIVER_EMAIL = (os.getenv("RECEIVER_EMAIL", "").strip()) or GMAIL_USER
 
-# 2. Gmail SMTP 설정
-GMAIL_USER = os.getenv("GMAIL_USER", "")  # 발송용 Gmail 주소
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")  # 구글 16자리 앱 비밀번호
-RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL", "") or GMAIL_USER  # 수신받을 이메일 주소
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
-# 3. 텔레그램 설정 (선택 사항)
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-
-# 4. AI API 설정
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 HISTORY_FILE = os.getenv("HISTORY_FILE", "history.json")
 
-# 웹 요청 기본 헤더
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -61,7 +57,6 @@ DEFAULT_HEADERS = {
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
-# 1차 필터링: 무관한 행정공고 제외 키워드
 EXCLUDE_KEYWORDS = [
     "거주불명자", "행정상 관리주소", "최고공고", "직권말소", "무단전출",
     "도로명주소", "교통유발부담금", "공시송달", "수의계약", "재결신청",
@@ -111,11 +106,16 @@ USER_PROFILE_PROMPT = """
 
 
 def load_history():
-    """이미 처리한 공고 목록 로드"""
+    """이미 처리한 공고 목록 로드 (이전 인코딩 에러로 실패한 공고는 자동 복구하여 재시도)"""
     if os.path.exists(HISTORY_FILE):
         try:
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                history = json.load(f)
+                # 이전에 메일 발송 에러로 전달되지 못한 건은 재전송하도록 복구
+                for k, v in list(history.items()):
+                    if v.get("status") == "matched_and_notified" and not v.get("mail_delivered", False):
+                        del history[k]
+                return history
         except Exception as e:
             logger.warning(f"히스토리 파일 로드 실패: {e}")
     return {}
@@ -131,17 +131,19 @@ def save_history(history):
 
 
 def send_gmail_notification(title, source, match_reason, summary_3lines, url):
-    """Gmail SMTP를 통한 고품질 카드형 이메일 발송"""
+    """Gmail SMTP를 통한 고품질 카드형 이메일 발송 (UTF-8 인코딩 완벽 처리)"""
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
         logger.warning("GMAIL_USER 또는 GMAIL_APP_PASSWORD가 설정되지 않아 메일 전송을 건너뜁니다.")
         return False
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[원주·강원 청년정책 알림] {title}"
-    msg["From"] = f"청년정책 비서 <{GMAIL_USER}>"
+    
+    # 헤더 한글 UTF-8 인코딩 (ASCII 인코딩 에러 해결)
+    clean_title = re.sub(r"[\r\n\t]+", " ", title).strip()
+    msg["Subject"] = Header(f"[원주·강원 청년정책 알림] {clean_title}", "utf-8")
+    msg["From"] = formataddr((str(Header("청년정책 비서", "utf-8")), GMAIL_USER))
     msg["To"] = RECEIVER_EMAIL
 
-    # 모바일 및 데스크톱에서 가독성이 뛰어난 반응형 HTML 이메일 템플릿
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ko">
@@ -167,7 +169,7 @@ def send_gmail_notification(title, source, match_reason, summary_3lines, url):
       <div class="card">
         <div class="header">
           <span class="badge">🏛 {source}</span>
-          <h2 class="title">{title}</h2>
+          <h2 class="title">{clean_title}</h2>
         </div>
         <div class="body">
           <div class="reason-box">
@@ -204,12 +206,13 @@ def send_gmail_notification(title, source, match_reason, summary_3lines, url):
     msg.attach(MIMEText(html_content, "html", "utf-8"))
 
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
             server.ehlo()
             server.starttls()
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, [RECEIVER_EMAIL], msg.as_string())
-        logger.info(f"📧 Gmail 발송 성공 -> {RECEIVER_EMAIL}: {title}")
+            # send_message를 사용하여 UTF-8 인코딩 문제 완벽 해결
+            server.send_message(msg)
+        logger.info(f"📧 Gmail 발송 성공 -> {RECEIVER_EMAIL}: {clean_title}")
         return True
     except Exception as e:
         logger.error(f"Gmail 발송 실패: {e}")
@@ -261,13 +264,7 @@ def dispatch_notification(title, source, match_reason, summary_3lines, url):
         if send_telegram_message(title, source, match_reason, summary_3lines, url):
             sent = True
 
-    if not sent:
-        print(f"\n[알림 시뮬레이션 - {source}] {title}")
-        print(f"👉 부합 이유: {match_reason}")
-        print(f"1. 지원 내용: {summary_3lines.get('line1_support')}")
-        print(f"2. 신청 자격: {summary_3lines.get('line2_qualification')}")
-        print(f"3. 마감 기한: {summary_3lines.get('line3_deadline')}")
-        print(f"🔗 링크: {url}\n")
+    return sent
 
 
 def call_llm_filter(title, source, content, url):
@@ -475,25 +472,30 @@ def main():
         analysis = call_llm_filter(title, notice["source"], content, notice["url"])
 
         if analysis.get("is_eligible", False):
-            matched_count += 1
             reason = analysis.get("match_reason", "조건 부합")
             summary = analysis.get("summary_3lines", {})
             logger.info(f"🎯 적합 정책 발굴! -> {title}")
 
-            # 알림 발송 (Gmail / 텔레그램)
-            dispatch_notification(
+            # 알림 발송
+            delivered = dispatch_notification(
                 title=title,
                 source=notice["source"],
                 match_reason=reason,
                 summary_3lines=summary,
                 url=notice["url"]
             )
-            history[n_id] = {
-                "status": "matched_and_notified",
-                "title": title,
-                "notified_at": datetime.now().isoformat(),
-                "summary": summary
-            }
+            
+            if delivered:
+                matched_count += 1
+                history[n_id] = {
+                    "status": "matched_and_notified",
+                    "mail_delivered": True,
+                    "title": title,
+                    "notified_at": datetime.now().isoformat(),
+                    "summary": summary
+                }
+            else:
+                logger.warning(f"알림 발송 미완료로 재시도를 위해 이력에 저장하지 않습니다: {title}")
         else:
             history[n_id] = {"status": "unmatched", "title": title}
 
