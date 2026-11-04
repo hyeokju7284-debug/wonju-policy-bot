@@ -9,7 +9,7 @@
 - 전공 및 분야: 화훼조형, 원예, 전시 디스플레이, 문화예술 기획, 청년 창업, 구직·취업 지원
 - 상태: 대학 졸업예정 / 청년 미취업자 (인천 현장실무 및 학업 병행 중)
 [알림 채널]
-- Gmail 이메일 (구글 앱 비밀번호 연동, UTF-8 완벽 지원) 및 텔레그램 푸시 지원
+- Gmail 이메일 (구글 앱 비밀번호 연동, 맥북 특수문자 자동 정규화 및 UTF-8 완벽 지원) 및 텔레그램 푸시 지원
 """
 
 import os
@@ -18,6 +18,7 @@ import json
 import logging
 import re
 import smtplib
+import unicodedata
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import Header
@@ -35,10 +36,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger("PolicyMonitor")
 
-# 환경변수 로드
+# 환경변수 로드 및 맥북 특수문자(ą 등) 자동 정규화
+def clean_ascii_secret(val):
+    if not val:
+        return ""
+    # 유니코드 분해 정규화(NFKD)를 통해 ą -> a 등으로 자동 복원 후 순수 ASCII 추출
+    normalized = unicodedata.normalize("NFKD", val)
+    cleaned = normalized.encode("ascii", "ignore").decode("ascii")
+    # 공백 및 줄바꿈 제거
+    return re.sub(r"\s+", "", cleaned)
+
 NOTIFICATION_CHANNEL = os.getenv("NOTIFICATION_CHANNEL", "email").lower()
 GMAIL_USER = os.getenv("GMAIL_USER", "").strip()
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+GMAIL_APP_PASSWORD = clean_ascii_secret(os.getenv("GMAIL_APP_PASSWORD", ""))
 RECEIVER_EMAIL = (os.getenv("RECEIVER_EMAIL", "").strip()) or GMAIL_USER
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
@@ -106,12 +116,11 @@ USER_PROFILE_PROMPT = """
 
 
 def load_history():
-    """이미 처리한 공고 목록 로드 (이전 인코딩 에러로 실패한 공고는 자동 복구하여 재시도)"""
+    """이미 처리한 공고 목록 로드 (메일 발송 미완료 건은 자동 복구)"""
     if os.path.exists(HISTORY_FILE):
         try:
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
                 history = json.load(f)
-                # 이전에 메일 발송 에러로 전달되지 못한 건은 재전송하도록 복구
                 for k, v in list(history.items()):
                     if v.get("status") == "matched_and_notified" and not v.get("mail_delivered", False):
                         del history[k]
@@ -131,14 +140,12 @@ def save_history(history):
 
 
 def send_gmail_notification(title, source, match_reason, summary_3lines, url):
-    """Gmail SMTP를 통한 고품질 카드형 이메일 발송 (UTF-8 인코딩 완벽 처리)"""
+    """Gmail SMTP를 통한 고품질 카드형 이메일 발송"""
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        logger.warning("GMAIL_USER 또는 GMAIL_APP_PASSWORD가 설정되지 않아 메일 전송을 건너뜁니다.")
+        logger.warning("GMAIL_USER 또는 GMAIL_APP_PASSWORD가 비어 있어 메일 전송을 건너뜁니다.")
         return False
 
     msg = MIMEMultipart("alternative")
-    
-    # 헤더 한글 UTF-8 인코딩 (ASCII 인코딩 에러 해결)
     clean_title = re.sub(r"[\r\n\t]+", " ", title).strip()
     msg["Subject"] = Header(f"[원주·강원 청년정책 알림] {clean_title}", "utf-8")
     msg["From"] = formataddr((str(Header("청년정책 비서", "utf-8")), GMAIL_USER))
@@ -151,7 +158,7 @@ def send_gmail_notification(title, source, match_reason, summary_3lines, url):
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background-color: #f6f8fa; margin: 0; padding: 20px; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif; background-color: #f6f8fa; margin: 0; padding: 20px; }}
         .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e1e4e8; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
         .header {{ background: #1a73e8; color: #ffffff; padding: 24px; text-align: left; }}
         .badge {{ display: inline-block; background: rgba(255,255,255,0.25); color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 8px; }}
@@ -196,7 +203,7 @@ def send_gmail_notification(title, source, match_reason, summary_3lines, url):
           </div>
         </div>
         <div class="footer">
-          본 메일은 2003년생 원주시 주민등록 청년(화훼·원예·전시·창업·구직 지원) 맞춤 자동화 봇에 의해 발송되었습니다.
+          본 메일은 2003년생 원주시 주민등록 청년 맞춤 자동화 봇에 의해 발송되었습니다.
         </div>
       </div>
     </body>
@@ -210,7 +217,6 @@ def send_gmail_notification(title, source, match_reason, summary_3lines, url):
             server.ehlo()
             server.starttls()
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            # send_message를 사용하여 UTF-8 인코딩 문제 완벽 해결
             server.send_message(msg)
         logger.info(f"📧 Gmail 발송 성공 -> {RECEIVER_EMAIL}: {clean_title}")
         return True
