@@ -58,5 +58,82 @@
   "wonju_city_495125": {
     "status": "excluded_keyword",
     "title": "자동차과태료 독촉고지서（최초납기 2026년 9월） 및 재산（예금） 압류통지서 반송에 대한 공시송달 공고NEW"
+  },
+  "wonju_youth_495078": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "「SSAFY 17기」 모집 안내NEW",
+    "notified_at": "2026-11-04T15:02:59.686507",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
+  },
+  "wonju_youth_494824": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "「청년라운지 11월 이벤트」 안내",
+    "notified_at": "2026-11-04T15:02:59.686518",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
+  },
+  "wonju_youth_494822": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "2027학년도 한국폴리텍대학 원주캠퍼스 직업교육과정 신입생 모집 안내",
+    "notified_at": "2026-11-04T15:02:59.686520",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
+  },
+  "wonju_youth_494432": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "청년라운지 11월 운영일 안내",
+    "notified_at": "2026-11-04T15:02:59.686522",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
+  },
+  "wonju_youth_493922": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "「현직자 특강 프로그램」 안내",
+    "notified_at": "2026-11-04T15:02:59.686524",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
+  },
+  "wonju_youth_493883": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "9월 출석왕이 들려주는 ＜청년라운지 우리들의 이야기＞",
+    "notified_at": "2026-11-04T15:02:59.686526",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
+  },
+  "wonju_youth_493470": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "「2026년 청년 창업 아카데미」 모집 결과 발표 및 개강 안내",
+    "notified_at": "2026-11-04T15:02:59.686527",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
   }
 }
