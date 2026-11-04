@@ -9,7 +9,7 @@
 - 전공 및 분야: 화훼조형, 원예, 전시 디스플레이, 문화예술 기획, 청년 창업, 구직·취업 지원
 - 상태: 대학 졸업예정 / 청년 미취업자 (인천 현장실무 및 학업 병행 중)
 [알림 채널]
-- Gmail 이메일 (Port 465 SSL / 587 듀얼 포트 지원, 일일 브리핑 단일 통합 발송) 및 텔레그램 푸시 지원
+- Gmail 이메일 (Port 465 SSL / 587 TLS 듀얼 포트, SSL Context 및 상세 통신 로그 지원)
 """
 
 import os
@@ -18,6 +18,7 @@ import json
 import logging
 import re
 import smtplib
+import ssl
 import unicodedata
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -190,7 +191,7 @@ def build_digest_html(matched_items):
 
 
 def send_gmail_digest(matched_items):
-    """Gmail SMTP를 통한 브리핑 이메일 전송 (Port 465 SSL 우선 접속으로 연결 끊김 원천 차단)"""
+    """Gmail SMTP를 통한 브리핑 이메일 전송 (Port 465 SSL 우선 + 587 STARTTLS 폴백, 상세 디버그 로깅)"""
     if not matched_items:
         return True
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
@@ -213,27 +214,35 @@ def send_gmail_digest(matched_items):
     html_content = build_digest_html(matched_items)
     msg.attach(MIMEText(html_content, "html", "utf-8"))
 
-    # 1차 시도: Port 465 SSL (GitHub Actions / 클라우드 환경에서 가장 안정적이며 차단 없음)
+    ssl_context = ssl.create_default_context()
+
+    # 1차 시도: Port 465 SSL (암호화 연결 즉시 수립)
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=25) as server:
+        logger.info("Gmail SMTP Port 465 SSL 연결 시도 중...")
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context, timeout=30) as server:
+            server.set_debuglevel(1)
+            server.ehlo()
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.send_message(msg)
         logger.info(f"📧 Gmail 발송 성공 (Port 465 SSL) -> {RECEIVER_EMAIL} ({count}건 수록)")
         return True
     except Exception as e1:
-        logger.warning(f"Port 465 SSL 접속 실패 ({e1}), Port 587로 재시도합니다.")
+        logger.warning(f"Port 465 SSL 발송 실패 ({type(e1).__name__}: {e1}), Port 587 STARTTLS로 재시도합니다.")
 
-    # 2차 시도: Port 587 STARTTLS (폴백)
+    # 2차 시도: Port 587 STARTTLS (표준 핸드셰이크)
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=25) as server:
+        logger.info("Gmail SMTP Port 587 STARTTLS 연결 시도 중...")
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as server:
+            server.set_debuglevel(1)
             server.ehlo()
-            server.starttls()
+            server.starttls(context=ssl_context)
+            server.ehlo()
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.send_message(msg)
         logger.info(f"📧 Gmail 발송 성공 (Port 587 TLS) -> {RECEIVER_EMAIL} ({count}건 수록)")
         return True
     except Exception as e2:
-        logger.error(f"Gmail 발송 최종 실패: {e2}")
+        logger.error(f"Gmail 발송 최종 실패 ({type(e2).__name__}: {e2})")
         return False
 
 
