@@ -1,0 +1,36 @@
+name: Wonju Youth Policy Monitor (Gmail)
+
+on:
+  schedule:
+    # 매일 한국 시간 아침 08:30 (UTC 전날 23:30) 자동 실행
+    - cron: '30 23 * * *'
+  workflow_dispatch: # 언제든 수동으로 즉시 실행 가능
+
+permissions:
+  contents: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests beautifulsoup4
+      - name: 모니터링 실행
+        env:
+          NOTIFICATION_CHANNEL: 'email'
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HISTORY_FILE: history.json
+        run: python wonju_policy_monitor.py
+      - name: 처리 이력 자동 갱신
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f history.json ]; then
+            git add history.json
+            git diff --staged --quiet || (git commit -m "chore: update history [skip ci]" && git push)
+          fi
