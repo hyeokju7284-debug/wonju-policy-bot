@@ -181,5 +181,45 @@
       "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
       "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
     }
+  },
+  "wonju_city_495300": {
+    "status": "unmatched",
+    "title": "지방보조금 취득 중요재산 현황 공시(2025년 자율방범초소 설비 지원)NEW"
+  },
+  "wonju_city_495299": {
+    "status": "unmatched",
+    "title": "지방보조금 취득 중요재산 현황 공시(2025년 자율방범대 순찰차량 지원)NEW"
+  },
+  "wonju_city_495298": {
+    "status": "unmatched",
+    "title": "지방보조금 취득 중요재산 현황 공시(2024년 자율방범대 순찰차량 지원)NEW"
+  },
+  "wonju_city_495277": {
+    "status": "unmatched",
+    "title": "2027년 기업지원일자리과 기간제근로자（이동노동자 쉼터 환경정비） 공개채용 공고NEW"
+  },
+  "wonju_city_495274": {
+    "status": "excluded_keyword",
+    "title": "「폐기물관리법」 위반 과태료 부과처분 사전통지 및 의견제출 공시송달 공고NEW"
+  },
+  "wonju_city_495273": {
+    "status": "excluded_keyword",
+    "title": "「폐기물관리법」 위반에 따른 3차 청결유지 조치명령 사전통지 공시송달 공고NEW"
+  },
+  "wonju_city_495272": {
+    "status": "excluded_keyword",
+    "title": "주민등록 무단전출자 직권조치결 공고NEW"
+  },
+  "wonju_city_495271": {
+    "status": "unmatched",
+    "title": "농업생산기반시설 사용허가 신청에 따른 공고(지정면 신평리 974-11번지)NEW"
+  },
+  "wonju_city_495269": {
+    "status": "unmatched",
+    "title": "2027년 장애인일자리사업(복지일자리 및 발달장애인요양보호사보조) 수행기관 선정결과 공고NEW"
+  },
+  "wonju_city_495268": {
+    "status": "unmatched",
+    "title": "흥업면 주민자치위원 공개 모집 공고NEW"
   }
 }
