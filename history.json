@@ -135,5 +135,51 @@
       "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
       "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
     }
+  },
+  "wonju_city_495205": {
+    "status": "excluded_keyword",
+    "title": "식품 및 건강기능식품 관련업소 영업소 폐쇄 사전통지 반송에 따른 공시송달 공고NEW"
+  },
+  "wonju_city_495193": {
+    "status": "excluded_keyword",
+    "title": "2026년 민방위 교육훈련 보충2차 집합교육 통지서 반송에 따른 공시송달 공고NEW"
+  },
+  "wonju_city_495190": {
+    "status": "unmatched",
+    "title": "원주시 지역사회협의체 위원 모집 공고NEW"
+  },
+  "wonju_city_495175": {
+    "status": "unmatched",
+    "title": "도로지정 공고（행구동 산48-2 외 3）NEW"
+  },
+  "wonju_city_495174": {
+    "status": "excluded_keyword",
+    "title": "「폐기물관리법」 위반 과태료 부과처분 사전통지 및 의견제출 공시송달 공고NEW"
+  },
+  "wonju_city_495170": {
+    "status": "excluded_keyword",
+    "title": "주민등록 무단전출자 직권조치 결과 공고NEW"
+  },
+  "wonju_youth_495199": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "「세상을 바꾸는 작은 생각, 사회적 경제 이야기」 교육 신청자 모집 안내NEW",
+    "notified_at": "2026-11-06T00:01:06.913301",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
+  },
+  "wonju_youth_495186": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "「2026년 원주 청년 재테크 교육」 참여자 모집 안내NEW",
+    "notified_at": "2026-11-06T00:01:06.913317",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
   }
 }
