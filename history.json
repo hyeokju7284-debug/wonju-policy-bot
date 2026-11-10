@@ -261,5 +261,56 @@
   "wonju_city_495407": {
     "status": "unmatched",
     "title": "2027년 원주시 체육시설사업소 기간제근로자(드림체육관)안내데스크 기간제 근로자 공개채용 공고NEW"
+  },
+  "wonju_city_495526": {
+    "status": "excluded_keyword",
+    "title": "소하천무단점유에 따란 처분 사전통지 공시송달 공고（호저면 만종리 317-4번지）NEW"
+  },
+  "wonju_city_495525": {
+    "status": "unmatched",
+    "title": "「2027년 지역대표예술단체 지원사업」  참여 지역예술단체 모집공고NEW"
+  },
+  "wonju_city_495523": {
+    "status": "unmatched",
+    "title": "도로지정 공고（소초면 흥양리 산 54 외 2）NEW"
+  },
+  "wonju_city_495512": {
+    "status": "unmatched",
+    "title": "2027년도 원주시 하수운영과 기간제근로자 채용 공고NEW"
+  },
+  "wonju_city_495511": {
+    "status": "excluded_keyword",
+    "title": "차령초과 자동차 말소신청에 따른 권리행사 안내 반송분 공시송달 공고NEW"
+  },
+  "wonju_city_495505": {
+    "status": "excluded_keyword",
+    "title": "거주불명등록자 행정상 관리주소 이전 공고（2차）NEW"
+  },
+  "wonju_city_495502": {
+    "status": "excluded_keyword",
+    "title": "2026년 주민등록 장기 거주불명자 최고 공고NEW"
+  },
+  "wonju_city_495501": {
+    "status": "unmatched",
+    "title": "2027학년도 취학아동명부 열람 공고NEW"
+  },
+  "wonju_city_495499": {
+    "status": "unmatched",
+    "title": "건설업 폐업신고에 따른 등록말소 공고[(주)티에스산업]NEW"
+  },
+  "wonju_city_495495": {
+    "status": "unmatched",
+    "title": "불법주정차 무인단속 카메라(CCTV) 운영 행정예고NEW"
+  },
+  "wonju_youth_495513": {
+    "status": "matched_and_notified",
+    "mail_delivered": true,
+    "title": "「2026년 청년일경험 지원사업 미래내일 일경험(인턴형)」 참여자 모집 안내NEW",
+    "notified_at": "2026-11-10T23:57:03.423266",
+    "summary": {
+      "line1_support": "공고문 상세 내용 및 지원 혜택 참조 (링크 확인)",
+      "line2_qualification": "원주시/강원도 거주 만 18~34세(또는 39세) 청년 및 미취업자",
+      "line3_deadline": "공고문 세부 마감일정 참조 (하단 원문 링크 바로가기)"
+    }
   }
 }
